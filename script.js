@@ -2,18 +2,10 @@
    RASHUMEDIA - SCRIPT.JS
 ================================================== */
 
-
-/* ==================================================
-   CONFIGURATION
-================================================== */
-
 const NEWS_API_URL =
     "https://henbadhootelevisionrashumediasunonl.vercel.app/api/latest";
 
-const HTV_STATUS_URL = "";
-
 const NEWS_REFRESH_TIME = 60 * 1000;
-const HTV_REFRESH_TIME = 60 * 1000;
 
 
 /* ==================================================
@@ -25,14 +17,8 @@ const errorMessage = document.getElementById("errorMessage");
 const retryButton = document.getElementById("retryButton");
 const lastUpdated = document.getElementById("lastUpdated");
 
-const offlineImage = document.getElementById("offlineImage");
-const youtubeContainer = document.getElementById("youtubeContainer");
-const youtubePlayer = document.getElementById("youtubePlayer");
-const liveStatus = document.getElementById("liveStatus");
-
 const menuButton = document.getElementById("menuButton");
 const navigation = document.getElementById("navigation");
-
 const currentYear = document.getElementById("currentYear");
 
 
@@ -46,14 +32,11 @@ if (currentYear) {
 
 
 /* ==================================================
-   ESCAPE HTML
+   HELPERS
 ================================================== */
 
 function escapeHTML(value) {
-
-    if (value === null || value === undefined) {
-        return "";
-    }
+    if (value === null || value === undefined) return "";
 
     return String(value)
         .replace(/&/g, "&amp;")
@@ -63,57 +46,29 @@ function escapeHTML(value) {
         .replace(/'/g, "&#039;");
 }
 
-
-/* ==================================================
-   CLEAN URL
-================================================== */
-
 function cleanURL(value) {
-
-    if (!value) {
-        return "";
-    }
-
-    return String(value).trim();
+    return value ? String(value).trim() : "";
 }
 
-
-/* ==================================================
-   CLEAN ARTICLES
-================================================== */
-
 function cleanArticles(articles) {
-
-    if (!Array.isArray(articles)) {
-        return [];
-    }
+    if (!Array.isArray(articles)) return [];
 
     const seen = new Set();
-
     const cleaned = [];
 
     for (const article of articles) {
-
-        if (!article) {
-            continue;
-        }
+        if (!article) continue;
 
         const title = String(article.title || "").trim();
         const url = cleanURL(article.url);
 
-        if (!title || !url) {
-            continue;
-        }
-
-        if (seen.has(url)) {
-            continue;
-        }
+        if (!title || !url || seen.has(url)) continue;
 
         seen.add(url);
 
         cleaned.push({
-            title: title,
-            url: url,
+            title,
+            url,
             image: cleanURL(article.image),
             source: article.source || "News",
             section: article.section || "Maldives"
@@ -125,36 +80,24 @@ function cleanArticles(articles) {
 
 
 /* ==================================================
-   SKELETON LOADING
+   LOADING
 ================================================== */
 
 function showLoadingCards() {
-
-    if (!newsGrid) {
-        return;
-    }
+    if (!newsGrid) return;
 
     let html = "";
 
     for (let i = 0; i < 12; i++) {
-
         html += `
             <div class="skeleton-card">
-
                 <div class="skeleton-image"></div>
-
                 <div class="skeleton-content">
-
                     <div class="skeleton-line small"></div>
-
                     <div class="skeleton-line large"></div>
-
                     <div class="skeleton-line medium"></div>
-
                     <div class="skeleton-button"></div>
-
                 </div>
-
             </div>
         `;
     }
@@ -162,36 +105,24 @@ function showLoadingCards() {
     newsGrid.innerHTML = html;
 }
 
-
-/* ==================================================
-   IMAGE FALLBACK
-================================================== */
-
 function handleImageError(image) {
-
     image.style.display = "none";
 
     const fallback =
         image.parentElement.querySelector(".image-fallback");
 
-    if (fallback) {
-        fallback.hidden = false;
-    }
+    if (fallback) fallback.hidden = false;
 }
 
 
 /* ==================================================
-   RENDER NEWS
+   NEWS RENDERING
 ================================================== */
 
 function renderNews(articles) {
-
-    if (!newsGrid) {
-        return;
-    }
+    if (!newsGrid) return;
 
     if (!articles.length) {
-
         newsGrid.innerHTML = "";
 
         if (errorMessage) {
@@ -206,17 +137,13 @@ function renderNews(articles) {
     }
 
     newsGrid.innerHTML = articles.map(article => {
-
         const title = escapeHTML(article.title);
         const url = escapeHTML(article.url);
         const image = escapeHTML(article.image);
         const section = escapeHTML(article.section);
 
-        let imageHTML = "";
-
-        if (image) {
-
-            imageHTML = `
+        const imageHTML = image
+            ? `
                 <img
                     class="card-image"
                     src="${image}"
@@ -224,9 +151,8 @@ function renderNews(articles) {
                     loading="lazy"
                     onerror="handleImageError(this)"
                 >
-            `;
-
-        }
+            `
+            : "";
 
         return `
             <article class="news-card">
@@ -244,7 +170,6 @@ function renderNews(articles) {
 
                 </div>
 
-
                 <div class="card-content">
 
                     <div class="card-meta">
@@ -261,11 +186,9 @@ function renderNews(articles) {
 
                     </div>
 
-
                     <h3 class="card-title">
                         ${title}
                     </h3>
-
 
                     <a
                         class="read-button"
@@ -280,7 +203,6 @@ function renderNews(articles) {
 
             </article>
         `;
-
     }).join("");
 }
 
@@ -329,7 +251,7 @@ async function loadNews() {
     try {
 
         const response = await fetch(
-            NEWS_API_URL,
+            NEWS_API_URL + "?t=" + Date.now(),
             {
                 method: "GET",
                 cache: "no-store"
@@ -337,7 +259,6 @@ async function loadNews() {
         );
 
         if (!response.ok) {
-
             throw new Error(
                 `News API returned ${response.status}`
             );
@@ -345,12 +266,18 @@ async function loadNews() {
 
         const data = await response.json();
 
-        console.log("RashuMedia API response:", data);
+        console.log(
+            "RashuMedia API response:",
+            data
+        );
 
-        const articles = cleanArticles(data.articles);
+        const articles =
+            cleanArticles(data.articles);
 
         if (!articles.length) {
-            throw new Error("The API returned no valid articles.");
+            throw new Error(
+                "The API returned no valid articles."
+            );
         }
 
         renderNews(articles);
@@ -382,148 +309,6 @@ async function loadNews() {
 
 
 /* ==================================================
-   HTV OFFLINE
-================================================== */
-
-function showHTVOffline() {
-
-    if (youtubePlayer) {
-        youtubePlayer.src = "";
-    }
-
-    if (youtubeContainer) {
-        youtubeContainer.hidden = true;
-    }
-
-    if (offlineImage) {
-        offlineImage.hidden = false;
-    }
-
-    if (liveStatus) {
-
-        liveStatus.textContent = "Offline";
-
-        liveStatus.className =
-            "live-status offline";
-    }
-}
-
-
-/* ==================================================
-   HTV LIVE
-================================================== */
-
-function showHTVLive(videoId) {
-
-    if (!videoId) {
-        showHTVOffline();
-        return;
-    }
-
-    const cleanVideoId =
-        String(videoId).trim();
-
-    if (!cleanVideoId) {
-        showHTVOffline();
-        return;
-    }
-
-    if (youtubePlayer) {
-
-        youtubePlayer.src =
-            "https://www.youtube.com/embed/" +
-            encodeURIComponent(cleanVideoId) +
-            "?autoplay=1&rel=0&modestbranding=1";
-    }
-
-    if (offlineImage) {
-        offlineImage.hidden = true;
-    }
-
-    if (youtubeContainer) {
-        youtubeContainer.hidden = false;
-    }
-
-    if (liveStatus) {
-
-        liveStatus.textContent = "LIVE";
-
-        liveStatus.className =
-            "live-status live";
-    }
-}
-
-
-/* ==================================================
-   CHECK HTV STATUS
-================================================== */
-
-async function checkHTVStatus() {
-
-    /*
-        Until we connect the real HTV
-        live-status endpoint, show
-        the offline image.
-    */
-
-    if (!HTV_STATUS_URL) {
-
-        showHTVOffline();
-
-        return;
-    }
-
-    try {
-
-        const response = await fetch(
-            HTV_STATUS_URL,
-            {
-                method: "GET",
-                cache: "no-store"
-            }
-        );
-
-        if (!response.ok) {
-            throw new Error(
-                `HTV status returned ${response.status}`
-            );
-        }
-
-        const data = await response.json();
-
-        console.log(
-            "HTV status:",
-            data
-        );
-
-        if (
-            data.live === true &&
-            data.videoId
-        ) {
-
-            showHTVLive(
-                data.videoId
-            );
-
-        } else {
-
-            showHTVOffline();
-
-        }
-
-    } catch (error) {
-
-        console.error(
-            "HTV status check failed:",
-            error
-        );
-
-        showHTVOffline();
-    }
-}
-
-
-/* ==================================================
    RETRY BUTTON
 ================================================== */
 
@@ -533,6 +318,7 @@ if (retryButton) {
         "click",
         loadNews
     );
+
 }
 
 
@@ -547,14 +333,13 @@ if (menuButton && navigation) {
         () => {
 
             const isOpen =
-                navigation.classList.toggle(
-                    "open"
-                );
+                navigation.classList.toggle("open");
 
             menuButton.setAttribute(
                 "aria-expanded",
                 String(isOpen)
             );
+
         }
     );
 
@@ -563,9 +348,7 @@ if (menuButton && navigation) {
         "click",
         event => {
 
-            if (
-                event.target.closest("a")
-            ) {
+            if (event.target.closest("a")) {
 
                 navigation.classList.remove(
                     "open"
@@ -575,33 +358,35 @@ if (menuButton && navigation) {
                     "aria-expanded",
                     "false"
                 );
+
             }
+
         }
     );
+
 }
 
 
 /* ==================================================
    START WEBSITE
+
+   IMPORTANT:
+   HTV LIVE DETECTION IS NOT HANDLED HERE.
+
+   htv-live.js is the ONLY file responsible
+   for detecting whether HTV is live.
 ================================================== */
 
 showLoadingCards();
 
 loadNews();
 
-checkHTVStatus();
-
 
 /* ==================================================
-   AUTOMATIC REFRESH
+   AUTOMATIC NEWS REFRESH
 ================================================== */
 
 setInterval(
     loadNews,
     NEWS_REFRESH_TIME
-);
-
-setInterval(
-    checkHTVStatus,
-    HTV_REFRESH_TIME
 );
