@@ -31,9 +31,6 @@ async function checkHTVLive() {
 
     } catch (error) {
         console.error("HTV detector error:", error);
-
-        // If the detector itself fails,
-        // don't pretend HTV is live.
         showHTVOffline();
     }
 }
